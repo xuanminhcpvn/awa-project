@@ -54,4 +54,68 @@ router.get("/",validateToken,async (req: CustomRequest, res: Response) => {
     }
   }
 );
+
+//Soft-delete. Everyone has access to do that => not removing entry from db
+router.patch("/:id/soft-delete", validateToken, async (req: CustomRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const fileId = req.params.id;
+    try {
+        const file = await DriveFile.findById(fileId);
+        if (!file) {
+            return res.status(404).json({ message: "File not found" });
+        }
+
+        // allow owner OR editor OR viewer(?)
+        const isOwner = file.ownerId.toString() === userId;
+        // If converting ObjectId to string and compare it doesn't work we may have to use mongoose own equals() function https://mongoosejs.com/docs/api/document.html#Document.prototype.equals()
+        const isAllowed = isOwner || file.editableUsers.map(id => id.toString()).includes(userId.toString()) || file.viewOnlyUsers.map(id => id.toString()).includes(userId.toString());
+        if (!isAllowed) {
+          return res.status(403).json({ message: "Permission denied" });
+        }
+        file.isSoftDeleted = true;
+        file.softDeletedAt = new Date();
+        await file.save();
+        return res.status(200).json({ message: "Moved to trash" });
+    } catch (error) {
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+//Permanent-delete => not showing to certain user. Only user can permanently delete
+router.delete("/:id/permanent", validateToken, async (req: CustomRequest, res: Response) => {
+    const userId = req.user?.userId;
+    const fileId = req.params.id;
+    try {
+        const file: IDriveFile | null  = await DriveFile.findById(fileId);
+        if (!file || file.isSoftDeleted) {
+            return res.status(404).json({ message: "File not found" });
+        }
+        if (file.ownerId.toString() !== userId) {
+            return res.status(403).json({ message: "Access denied, only owner can permanently delete" });//well the button only renders to owner so not really needed
+        }
+        await DriveFile.findByIdAndDelete(fileId);
+        res.json({ message: "File deleted permanently" });
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+router.get("/me", validateToken, async (req: CustomRequest, res: Response) => {
+    try {
+        const userId = req.user?.userId;
+
+        if (!userId) {
+            return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        const user = await User.findById(userId).select("-password");
+
+        if (!user) {
+            return res.status(404).json({ message: "User not found" });
+        }
+        return res.status(200).json(user);
+    } catch (error) {
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
 export default router;

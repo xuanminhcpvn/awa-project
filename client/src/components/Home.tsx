@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 interface IDriveFile {
     _id: string;
+    ownerId: string
     filename: string;
     type: "text" | "spreadsheet" | "slide" | "image";
     updatedAt: string;
@@ -23,7 +24,7 @@ const Home = () => {
     useEffect(() => {
         if(localStorage.getItem("token")) {
             setJwt(localStorage.getItem("token"))
-            setUser(JSON.parse(localStorage.getItem("user") || "null"))
+            fetchMe();
         }
     }, [jwt])
     console.log(user);
@@ -82,8 +83,62 @@ const Home = () => {
         }
     };
 
+    const softDelete = async (id: string) => {
+        try {
+            const res = await fetch(`/api/files/${id}/soft-delete`, {
+                method: "PATCH",
+                headers: {
+                    "Authorization": `Bearer ${jwt}`
+                }
+            });
 
-    return (
+            if (!res.ok) {
+                throw new Error("Soft delete failed");
+            }
+
+            fetchFiles();
+        } catch (err) {
+            console.log(err);
+        }
+    };
+
+    const permanentDelete = async (id: string) => {
+        try {
+            const res = await fetch(`/api/files/${id}/permanent`, {
+                method: "DELETE",
+                headers: {
+                    "Authorization": `Bearer ${jwt}`
+                }
+            });
+            if (!res.ok) {
+                throw new Error("Permanent delete failed");
+            }
+            fetchFiles();
+        } catch (err) {
+            console.log(err);
+        }
+    };
+
+    const fetchMe = async () => {
+        try {
+            const res = await fetch("/api/user/me", {
+                headers: {
+                    "Authorization": `Bearer ${jwt}`
+                }
+            });
+
+            if (!res.ok) {
+                throw new Error("Failed to fetch user");
+            }
+
+            const user = await res.json();
+            setUser(user);
+        } catch (err) {
+            console.log(err);
+        }
+    };
+
+return (
     <div style={{ padding: "20px" }}>
         <h2>My Drive</h2>
 
@@ -100,19 +155,41 @@ const Home = () => {
                 {loading && <p>Loading...</p>}
 
                 <ul>
-                    {files.map((file) => (
-                        <li key={file._id}>
-                            <strong>{file.filename}</strong> ({file.type}) —{" "}
-                            {new Date(file.updatedAt).toLocaleString()}
-                        </li>
-                    ))}
+                    {files.map((file) => {
+                        const isOwner = user?._id === file.ownerId;
+
+                        return (
+                            <li key={file._id}>
+                                <strong>{file.filename}</strong> ({file.type}) —{" "}
+                                {new Date(file.updatedAt).toLocaleString()}
+
+                                {/* Soft delete (everyone) */}
+                                <button
+                                    onClick={() => softDelete(file._id)}
+                                    style={{ marginLeft: "10px" }}
+                                >
+                                    Delete
+                                </button>
+
+                                {/* Permanent delete (owner only) */}
+                                {isOwner && (
+                                    <button
+                                        onClick={() => permanentDelete(file._id)}
+                                        style={{ marginLeft: "10px", color: "red" }}
+                                    >
+                                        Delete Forever
+                                    </button>
+                                )}
+                            </li>
+                        );
+                    })}
                 </ul>
 
                 {files.length === 0 && !loading && <p>No files found</p>}
             </>
         )}
     </div>
-    ); 
+);
 };
 
 export default Home;
