@@ -2,9 +2,11 @@ import { validateToken, CustomRequest } from "../middleware/validateToken";
 import { Response, Router } from "express"
 import { DriveFile, IDriveFile } from "../models/DriveFile";
 import { User, IUser } from "../models/User";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 
 const router: Router = Router();
+/* BASIC CRUD: */
+
 /* Create a new DriveFile for the authenticated user */
 router.post("/", validateToken,async (req: CustomRequest, res: Response) => {
     const { filename, type } = req.body as IDriveFile;
@@ -99,6 +101,55 @@ router.delete("/:id/permanent", validateToken, async (req: CustomRequest, res: R
     }
 });
 
+// Update info
+router.put("/:id",validateToken, async (req: CustomRequest, res:Response) => {
+    const driveFileId = req.params.id as string;
+    //Possible body contents
+    const contents: string | undefined = req.body.contents;
+    const filename: string | undefined = req.body.filename;
+    const isPublic: boolean | undefined = req.body.isPublic;
+    const userId: string | undefined = req.user?.userId;
+
+     try {
+        const driveFile: IDriveFile | null = await DriveFile.findById(driveFileId);
+
+        if (!driveFile || driveFile.isSoftDeleted) {
+            return res.status(404).json({message: "File not found"});
+        }
+
+        //Check permissions
+        const isOwner: boolean = driveFile.ownerId.toString() === userId;//Not sure if it is save to compare ObjectId with ===
+
+        const canEdit: boolean = isOwner || driveFile.editableUsers.find((editableUserObjectId: Types.ObjectId): boolean =>editableUserObjectId.toString() === userId) !== undefined;
+        
+        //const canView: boolean = canEdit || driveFile.viewOnlyUsers.find((viewerObjectId: Types.ObjectId): boolean =>viewerObjectId.toString() === userId) !== undefined;
+
+        if (!canEdit) {
+            return res.status(403).json({message: "Access denied, no edit permission"});
+        }
+        //Locking mechanism preventing concurrent editing
+        if (driveFile.currentlyUsedBy && driveFile.currentlyUsedBy.toString() !== userId) {
+            const editingUser = await User.findById(driveFile.currentlyUsedBy) as IUser;
+            return res.status(400).json({message: `File is currently being edited by ${editingUser.username}`});
+        }
+        
+        if (contents !== undefined) {driveFile.contents = contents;} 
+        if (filename !== undefined) {driveFile.filename = filename;}
+        if (isPublic !== undefined) {driveFile.isPublic = isPublic;}
+        if (userId) {driveFile.currentlyUsedBy = new Types.ObjectId(userId);}
+
+        await driveFile.save();
+
+        return res.status(200).json(driveFile);
+        
+    } catch (err) {
+      return res.status(500).json({error: "Internal Server Error"});
+    }
+
+});
+
+
+//Route to get user's info 
 router.get("/me", validateToken, async (req: CustomRequest, res: Response) => {
     try {
         const userId = req.user?.userId;

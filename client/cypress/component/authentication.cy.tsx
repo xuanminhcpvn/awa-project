@@ -3,6 +3,7 @@ import Register from "../../src/components/Register";
 //Sources:
 // Tutorialspoint https://www.tutorialspoint.com/cypress/cypress_build_first_test.htm
 // Cypress docs: https://docs.cypress.io/app/component-testing/react/examples
+
 //test suite
 //to run npx cypress run --component  
 describe("Authentication Unit Tests (Cypress)", () => {
@@ -21,6 +22,7 @@ describe("Authentication Unit Tests (Cypress)", () => {
         cy.get('input[placeholder="Password"]').should("exist");
     });
     //https://www.tutorialspoint.com/cypress/cypress_get_and_post.htm
+    //https://learn.cypress.io/cypress-fundamentals/waiting-and-retry-ability
     it("Register route response and request are correct and registeration successful", function () {
     //Can't get intercept to work properly => so I used this cy.request() method
     cy.request("POST", "http://localhost:3000/api/user/register", {

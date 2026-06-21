@@ -164,7 +164,7 @@ return (
                                 {new Date(file.updatedAt).toLocaleString()}
 
                                 {/* Soft delete (everyone) */}
-                                <button
+                                <button data-testid="cypress-soft-delete-btn"
                                     onClick={() => softDelete(file._id)}
                                     style={{ marginLeft: "10px" }}
                                 >

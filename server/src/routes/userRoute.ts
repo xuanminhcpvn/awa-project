@@ -69,4 +69,3 @@ router.get("/me", validateToken, async (req: CustomRequest, res:Response) => {
     }
 });
 
-export default router;
