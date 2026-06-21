@@ -3,10 +3,12 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Home from "./components/Home";
 import Login from "./components/Login";
 import Register from "./components/Register";
+import Navigation from './components/Navigation'
 function App() {
   return (
     <>
     <BrowserRouter>
+      <Navigation />
       <div className="App"></div>
       <h1>File Drive App</h1>
       <Routes>
