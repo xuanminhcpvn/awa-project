@@ -1,12 +1,12 @@
 
-import { Response, Router } from "express";
+import { Response, Request, Router } from "express";
 import { Types } from "mongoose";
 import {DriveFile, IDriveFile} from "../models/DriveFile";
 import { validateToken, CustomRequest } from "../middleware/validateToken";
 import { IUser, User } from "../models/User";
 
 const router: Router = Router();
-//Single permission view
+//Single file view for auth user
 router.get("/:id", validateToken, async (req: CustomRequest, res: Response) => {
     try {
         const driveFileId = req.params.id as string;
@@ -36,6 +36,32 @@ router.get("/:id", validateToken, async (req: CustomRequest, res: Response) => {
             contents: driveFile.contents,
             canEdit: canEdit,
             canView: canView
+        });
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
+
+//Single file view for public file
+router.get("/public/:id", async (req: Request, res: Response) => {
+    try {
+        const driveFileId = req.params.id as string;
+
+        const driveFile: IDriveFile | null = await DriveFile.findById(driveFileId);
+
+        if (!driveFile) {
+            return res.status(404).json({ error: "File not found" });
+        }
+        if (!driveFile.isPublic) {
+            return res.status(403).json({ error: "This document is not public" });
+        }
+        
+        return res.status(200).json({
+            _id: driveFile._id,
+            filename: driveFile.filename,
+            contents: driveFile.contents,
         });
 
     } catch (error) {

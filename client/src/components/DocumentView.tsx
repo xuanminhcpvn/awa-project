@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import ReactQuill from "react-quill-new";
 
 interface IDocument {
     _id: string;
@@ -7,36 +8,38 @@ interface IDocument {
     contents: string;
 }
 
-const DocumentView = () => {
-    const { fileId } = useParams<{ fileId: string }>();
+const DocumentPublic = () => {
+    const { driveFileId } = useParams<{ driveFileId: string }>();
 
     const [document, setDocument] = useState<IDocument | null>(null);
 
     useEffect(() => {
         const fetchDocument = async () => {
-            const token = localStorage.getItem("token");
-
-            const response = await fetch(`/api/document/${fileId}`, {
-                headers: {
-                    Authorization: `Bearer ${token}`,
-                },
-            });
+            const response = await fetch(`/api/document/${driveFileId}`);
 
             const data = await response.json();
-            setDocument(data.file);
+            setDocument(data);
         };
 
-        if (fileId) {
+        if (driveFileId) {
             fetchDocument();
         }
-    }, [fileId]);
+    }, [driveFileId]);
+
+    const modules = {
+        toolbar: false, 
+    };
 
     return (
-        <div>
+        <div style={{ padding: "20px" }}>
             <h2>{document?.filename}</h2>
-            <p>{document?.contents}</p>
+            {document ? (
+                <ReactQuill value={document.contents} readOnly={true} modules={modules} theme="snow"/>
+                ) : (
+                <p>Loading...</p>
+            )}
         </div>
     );
 };
 
-export default DocumentView;
+export default DocumentPublic;
