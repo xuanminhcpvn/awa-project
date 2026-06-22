@@ -6,6 +6,7 @@ interface IDriveFile {
     ownerId: string
     filename: string;
     type: "text" | "spreadsheet" | "slide" | "image";
+    createdAt: string,
     updatedAt: string;
     isPublic: boolean;
     shareLink: string;
@@ -255,6 +256,13 @@ const Home = () => {
         alert("Link copied!");
     };
 
+    const formatDate = (dateInput: string) => {
+        const date: Date = new Date(dateInput);
+        const day:string = String(date.getDate()).padStart(2, "0");
+        const month:string = String(date.getMonth() + 1).padStart(2, "0");
+        const year:string = String(date.getFullYear());
+        return `${day}.${month}.${year}`;
+    };
     //basic UI (see previous git commit) is done by me
     //I used chatGPT to refine UI
     return (
@@ -284,12 +292,13 @@ const Home = () => {
                             >
                                 {/* File Info */}
                                 <div style={{ marginBottom: "10px" }}>
-                                    <strong style={{ fontSize: "18px" }}>{file.filename}</strong>
+                                    <strong style={{ fontSize: "18px" }}>Filename: {file.filename}</strong>
                                     <div>Type: {file.type}</div>
-                                    <div>Updated: {new Date(file.updatedAt).toLocaleString()}</div>
-                                    {file.isPublic && (
-                                        <div>Public</div>
-                                    )}
+                                    <div>Created: {formatDate(file.createdAt)}</div>
+                                    <div>Updated: {formatDate(file.updatedAt)}</div>
+                                    <div>
+                                        {file.isPublic ? "Public" : "Private"}
+                                    </div>
                                 </div>
                                 {/* Buttons modifying file  */}
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
