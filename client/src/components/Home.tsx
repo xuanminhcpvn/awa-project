@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 interface IDriveFile {
     _id: string;
@@ -6,6 +7,8 @@ interface IDriveFile {
     filename: string;
     type: "text" | "spreadsheet" | "slide" | "image";
     updatedAt: string;
+    isPublic: boolean;
+    shareLink: string;
 }
 
 interface IUser {
@@ -119,6 +122,66 @@ const Home = () => {
         }
     };
 
+    const handleShare = async (driveFileId: string, shareType: "edit" | "view") => {
+        const email: string | null = prompt(`Enter the email address to grant ${shareType} access:`);
+        if (!email) {
+            return;
+        }
+        try {
+            const route: string = shareType === "edit" ? `/api/files/${driveFileId}/editor` : `/api/files/${driveFileId}/viewer`;
+            const res: Response = await fetch(route, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${jwt}`
+                },
+                body: JSON.stringify({email: email})
+            });
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.message || "Share failed");
+            }
+            
+            alert(`${shareType === "edit" ? "Editor" : "Viewer"} access granted successfully`);
+
+    } catch (err) {
+        if (err instanceof Error) {
+            alert(err.message);
+        }
+    }
+    };
+
+    const togglePublic = async (driveFileId: string, currentState: boolean) => {
+        try {
+            const res = await fetch(`/api/files/${driveFileId}/visibility`, {
+                method: "PATCH",
+                headers: {
+                    "Content-Type": "application/json",
+                    Authorization: `Bearer ${jwt}`,
+                },
+                body: JSON.stringify({ isPublic: !currentState }),
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                throw new Error(data.message || "Failed");
+            }
+
+            setFiles((previousFilesList: IDriveFile[]) =>previousFilesList.map((fileItem: IDriveFile) => { const isTargetFileBeingUpdated: boolean = fileItem._id === driveFileId; // Check if this file matches the file we want to update
+                return isTargetFileBeingUpdated
+                ? {
+                    ...fileItem, // Keep all existing file properties unchanged
+                    isPublic: data.isPublic, // Update only the isPublic field with new value
+                    shareLink: data.shareLink
+                } : fileItem; // If not the target file, return it unchanged
+            }));
+
+        } catch (err) {
+            alert(err instanceof Error ? err.message : "Error");
+        }
+    };
+
     const fetchMe = async () => {
         try {
             const res = await fetch("/api/user/me", {
@@ -138,58 +201,86 @@ const Home = () => {
         }
     };
 
-return (
-    <div style={{ padding: "20px" }}>
-        <h2>My Drive</h2>
+    const copyLink = (driveFile: IDriveFile) => {
+        if (!driveFile.isPublic) {
+            alert("Make file public first");
+            return;
+        }
 
-        {!jwt ? (
-            <p>Please login to fetch the files.</p>
-        ) : (
-            <>
-                <button onClick={createFile}>+ New File</button>
+        const link = `${window.location.origin}/shared/${driveFile.shareLink}`;
+        navigator.clipboard.writeText(link);
 
-                <button onClick={fetchFiles} style={{ marginLeft: "10px" }}>
-                    Refresh
-                </button>
+        alert("Link copied!");
+    };
 
-                {loading && <p>Loading...</p>}
+    return (
+        <div style={{ padding: "20px" }}>
+            <h2>My Drive</h2>
 
-                <ul>
-                    {files.map((file) => {
-                        const isOwner = user?._id === file.ownerId;
+            {!jwt ? (
+                <p>Please login to fetch the files.</p>
+            ) : (
+                <>
+                    <button onClick={createFile}>+ New File</button>
 
-                        return (
-                            <li key={file._id}>
-                                <strong>{file.filename}</strong> ({file.type}) —{" "}
-                                {new Date(file.updatedAt).toLocaleString()}
+                    <button onClick={fetchFiles} style={{ marginLeft: "10px" }}>
+                        Refresh
+                    </button>
 
-                                {/* Soft delete (everyone) */}
-                                <button data-testid="cypress-soft-delete-btn"
-                                    onClick={() => softDelete(file._id)}
-                                    style={{ marginLeft: "10px" }}
-                                >
-                                    Delete
-                                </button>
+                    {loading && <p>Loading...</p>}
 
-                                {/* Permanent delete (owner only) */}
-                                {isOwner && (
-                                    <button
-                                        onClick={() => permanentDelete(file._id)}
-                                        style={{ marginLeft: "10px", color: "red" }}
+                    <ul>
+                        {files.map((file) => {
+                            const isOwner = user?._id === file.ownerId;
+
+                            return (
+                                <li key={file._id}>
+                                    <strong>{file.filename}</strong> ({file.type}) —{" "}
+                                    {new Date(file.updatedAt).toLocaleString()}
+                                    {/* Share buttons*/}
+                                    {isOwner && (
+                                    <>
+                                        <button onClick={() => handleShare(file._id, "edit")}>Share Edit</button>
+                                        <button onClick={() => handleShare(file._id, "view")}>Share View</button>
+                                        {/* Public toggle button */}
+                                        <button onClick={() => togglePublic(file._id, file.isPublic)}>{file.isPublic ? "Make Private" : "Make Public"}</button>
+
+                                        {/* copy link only if public */}
+                                        {file.isPublic && (<button onClick={() => copyLink(file)}>Copy Public Link</button>)}
+                                    </>
+                                    )}
+                                      {/* Edit in editor */}
+                                    <Link to={`/editor/${file._id}`}>
+                                        Edit
+                                    </Link>
+
+                                    {/* Soft delete (everyone) */}
+                                    <button data-testid="cypress-soft-delete-btn"
+                                        onClick={() => softDelete(file._id)}
+                                        style={{ marginLeft: "10px" }}
                                     >
-                                        Delete Forever
+                                        Delete
                                     </button>
-                                )}
-                            </li>
-                        );
-                    })}
-                </ul>
 
-                {files.length === 0 && !loading && <p>No files found</p>}
-            </>
-        )}
-    </div>
-);
+                                    {/* Permanent delete (owner only) */}
+                                    {isOwner && (
+                                        <button
+                                            onClick={() => permanentDelete(file._id)}
+                                            style={{ marginLeft: "10px", color: "red" }}
+                                        >
+                                            Delete permanently
+                                        </button>
+                                    )}
+                                </li>
+                            );
+                        })}
+                    </ul>
+
+                    {files.length === 0 && !loading && <p>No files found</p>}
+                </>
+            )}
+        </div>
+    );
 };
 
 export default Home;

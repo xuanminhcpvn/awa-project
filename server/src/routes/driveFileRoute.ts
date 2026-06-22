@@ -148,7 +148,150 @@ router.put("/:id",validateToken, async (req: CustomRequest, res:Response) => {
 
 });
 
+//Grant editor permission
+router.post("/:id/editor", validateToken,async (req: CustomRequest, res: Response) => {
+  const driveFileId = req.params.id as string;
+  const userId: string | undefined  = req.user?.userId;
+  const userEmailToAdd: string = req.body.email;
+  try {
+    
+    const driveFile: IDriveFile | null = await DriveFile.findById(driveFileId);
+    if (!driveFile || driveFile.isSoftDeleted){
+      return res.status(404).json({message: "File not found"});
+    }
+    const isOwner: boolean = driveFile.ownerId.toString() === userId;
+    if (!isOwner) {
+      return res.status(403).json({message: "Only owner can add editor permission"});
+    }
+    const userToAdd = await User.findOne({ email: userEmailToAdd });
+    if (!userToAdd) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const userIdToAdd: string = userToAdd._id.toString();
+    const alreadyEditable: boolean = driveFile.editableUsers.find((editableUserObjectId: Types.ObjectId): boolean =>editableUserObjectId.toString() === userIdToAdd) !== undefined;
 
+    if (alreadyEditable){
+      return res.status(200).json({message: `${userEmailToAdd} already have edit permission`});
+    }
+    driveFile.editableUsers.push(new Types.ObjectId(userIdToAdd));
+    await driveFile.save();
+    return res.status(200).json(driveFile);
+  } catch (err) {
+    return res.status(500).json({err: "Internal Server Error"});
+  }
+})
+//Grant view permission (not really needed)
+router.post("/:id/viewer", validateToken, async (req: CustomRequest, res: Response) => {
+
+    const driveFileId = req.params.id as string;
+    const userEmailToAdd: string = req.body.email;
+    const userId: string | undefined = req.user?.userId;
+
+    try {
+      const driveFile: IDriveFile | null =await DriveFile.findById(driveFileId);
+      if (!driveFile || driveFile.isSoftDeleted) {
+        return res.status(404).json({message: "File not found"});
+      }
+
+      const isOwner: boolean = driveFile.ownerId.toString() === userId;
+      if (!isOwner) {
+        return res.status(403).json({message: "Only owner can add viewers"});
+      }
+
+      const userToAdd = await User.findOne({ email: userEmailToAdd });
+      if (!userToAdd) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      const userIdToAdd: string = userToAdd._id.toString();
+      
+      const alreadyViewable: boolean = driveFile.viewOnlyUsers.find((viewOnlyUserObjectId: Types.ObjectId): boolean =>viewOnlyUserObjectId.toString() === userIdToAdd) !== undefined;
+
+      if (alreadyViewable){
+        return res.status(200).json({message: `${userEmailToAdd} already have view permission`});
+      }
+      driveFile.viewOnlyUsers.push(new Types.ObjectId(userIdToAdd));
+      await driveFile.save();
+      return res.status(200).json(driveFile);
+    } catch (error) {
+      return res.status(500).json({error: "Internal Server Error"});
+    }
+});
+router.post("/:id/share/view", validateToken, async (req: CustomRequest, res: Response) => {
+  const driveFileId = req.params.id as string;
+  const userId: string | undefined = req.user?.userId;
+
+  try {
+    const driveFile: IDriveFile | null = await DriveFile.findById(driveFileId);
+
+    if (!driveFile || driveFile.isSoftDeleted) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    if (driveFile.ownerId.toString() !== userId) {
+      return res.status(403).json({ message: "Only owner can create link" });
+    }
+
+    const shareLink: string = new Types.ObjectId().toString();
+
+    driveFile.isPublic = true;
+    driveFile.shareLink = shareLink;
+    await driveFile.save();
+    return res.status(200).json({shareUrl: `${process.env.FRONTEND_URL}/shared/${shareLink}`});
+
+  } catch {
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+router.get("/shared/:shareLink", async (req, res) => {
+  const shareLink: string = req.params.shareLink;
+
+  try {
+    const file = await DriveFile.findOne({shareLink: shareLink,publicView: true});
+
+    if (!file) {
+      return res.status(404).json({ message: "Invalid link or file not found" });
+    }
+
+    return res.status(200).json({...file.toObject(),mode: "read-only"});
+  } catch {
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+//set public/private
+router.patch("/:id/visibility", validateToken, async (req: CustomRequest, res: Response) => {
+    const driveFileId = req.params.id as string;
+    const userId: string | undefined = req.user?.userId;
+    const { isPublic }: { isPublic: boolean } = req.body;
+
+    try {
+        const driveFile = await DriveFile.findById(driveFileId);
+
+        if (!driveFile || driveFile.isSoftDeleted) {
+            return res.status(404).json({ message: "File not found" });
+        }
+
+        if (driveFile.ownerId.toString() !== userId) {
+            return res.status(403).json({ message: "Only owner can change visibility" });
+        }
+
+        driveFile.isPublic = isPublic;
+
+        // if turning off public → optionally clear link
+        if (!isPublic) {
+            driveFile.shareLink = null; 
+        } else if (!driveFile.shareLink) {
+            driveFile.shareLink = new Types.ObjectId().toString();
+        }
+
+        await driveFile.save();
+        return res.status(200).json(driveFile);
+
+    } catch {
+        return res.status(500).json({ error: "Internal Server Error" });
+    }
+});
 //Route to get user's info 
 router.get("/me", validateToken, async (req: CustomRequest, res: Response) => {
     try {
@@ -158,7 +301,7 @@ router.get("/me", validateToken, async (req: CustomRequest, res: Response) => {
             return res.status(401).json({ message: "Unauthorized" });
         }
 
-        const user = await User.findById(userId).select("-password");
+        const user = await User.findById(userId).select("-password"); 
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -168,5 +311,9 @@ router.get("/me", validateToken, async (req: CustomRequest, res: Response) => {
         return res.status(500).json({ error: "Internal Server Error" });
     }
 });
+
+
+
+
 
 export default router;

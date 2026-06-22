@@ -4,6 +4,7 @@ import Home from "./components/Home";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Navigation from './components/Navigation'
+import Editor from './components/Editor';
 function App() {
   return (
     <>
@@ -13,6 +14,7 @@ function App() {
       <h1>File Drive App</h1>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="/editor/:fileId" element={<Editor />} />
         <Route path="/register" element={<Register />} />
         <Route path="/login" element={<Login/>} />
       </Routes>
