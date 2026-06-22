@@ -24,12 +24,21 @@ const Home = () => {
     const [loading, setLoading] = useState<boolean>(false);
     const [user, setUser] = useState<IUser | null>(null);
     const navigate = useNavigate();
+    //Updated state control to set jtw token once and fetch everything else when jwt is set or refreshed
     useEffect(() => {
-        if(localStorage.getItem("token")) {
-            setJwt(localStorage.getItem("token"))
-            fetchMe();
+        const token = localStorage.getItem("token");
+        if (token) {
+            setJwt(token);
         }
-    }, [jwt])
+    }, []);
+
+    useEffect(() => {
+        if (!jwt){
+            return;
+        }
+        fetchMe();
+        fetchFiles();
+    }, [jwt]);
     
     // GET files
     const fetchFiles = async () => {
@@ -59,17 +68,14 @@ const Home = () => {
     };
 
     // POST new file
-    // POST new file
     const createFile = async () => {
         // Ask user for filename
         const enteredFileName: string | null = prompt("Enter file name:");
-
         // If user cancels or enters empty name, stop creation
         if (!enteredFileName || enteredFileName.trim() === "") {
             alert("File name is required!");
             return;
         }
-
         try {
             const res = await fetch("/api/files", {
                 method: "POST",
@@ -86,16 +92,11 @@ const Home = () => {
             if (!res.ok) {
                 throw new Error("Error while creating new file");
             }
-
-            const newFile: IDriveFile = await res.json();
-
-            console.log("Created file:", newFile);
-
             // Refresh file list after creation
             fetchFiles();
 
         } catch (err) {
-            console.log("POST error:", err);
+            console.log("error:", err);
         }
     };
 
@@ -151,20 +152,14 @@ const Home = () => {
                     "Authorization": `Bearer ${jwt}`
                 },
                 body: JSON.stringify({
-                    filename: newFileName.trim()
+                    filename: newFileName
                 })
             });
-
             if (!res.ok) {
                 throw new Error("Failed to rename file");
             }
-
-            const updatedFile = await res.json();
-            console.log("Renamed file:", updatedFile);
-
             // refresh list
             fetchFiles();
-
         } catch (err) {
             console.log("Rename error:", err);
             alert("Rename failed");

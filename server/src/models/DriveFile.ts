@@ -11,6 +11,7 @@ interface IDriveFile extends Document {
     editableUsers: mongoose.Types.ObjectId[];
     viewOnlyUsers: mongoose.Types.ObjectId[];
     currentlyUsedBy?: mongoose.Types.ObjectId | null;
+    lockedAt?: Date | null;
     isFavorite: boolean;
     isSoftDeleted: boolean;
     softDeletedAt?: Date | null;
@@ -27,6 +28,7 @@ const driveFileSchema: Schema = new Schema({
     editableUsers: {type: [Schema.Types.ObjectId], ref:"User",required: false, default: []},
     viewOnlyUsers: {type: [Schema.Types.ObjectId], ref:"User",required: false, default: []},
     currentlyUsedBy: {type: Schema.Types.ObjectId, ref:"User",default: null},//must init to [] => prevent self-locking 
+    lockedAt: {type: Date,default: null},
     isFavorite: {type: Boolean, default: false, required: false},
     isSoftDeleted: {type: Boolean,default: false,required: false},
     softDeletedAt: {type: Date,default: null,required: false},
