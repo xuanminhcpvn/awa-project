@@ -4,23 +4,25 @@ import Home from "./components/Home";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Navigation from './components/Navigation'
-import Editor from './components/Editor';
+import DocumentView from './components/DocumentView';
+import DocumentEdit from './components/DocumentEdit';
 function App() {
   return (
-    <>
     <BrowserRouter>
       <Navigation />
-      <div className="App"></div>
-      <h1>File Drive App</h1>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/editor/:fileId" element={<Editor />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/login" element={<Login/>} />
-      </Routes>
-    </BrowserRouter>
-    </>
-  )
-}
 
+      <div className="App">
+        <h1>File Drive App</h1>
+
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/document/edit/:fileId" element={<DocumentEdit />} />
+          <Route path="/document/view/:fileId" element={<DocumentView />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/login" element={<Login />} />
+        </Routes>
+      </div>
+    </BrowserRouter>
+  );
+}
 export default App

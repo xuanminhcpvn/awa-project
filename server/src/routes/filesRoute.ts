@@ -56,7 +56,6 @@ router.get("/",validateToken,async (req: CustomRequest, res: Response) => {
     }
   }
 );
-
 //Soft-delete. Everyone has access to do that => not removing entry from db
 router.patch("/:id/soft-delete", validateToken, async (req: CustomRequest, res: Response) => {
     const userId = req.user?.userId;
@@ -83,7 +82,7 @@ router.patch("/:id/soft-delete", validateToken, async (req: CustomRequest, res: 
     }
 });
 //Permanent-delete => not showing to certain user. Only user can permanently delete
-router.delete("/:id/permanent", validateToken, async (req: CustomRequest, res: Response) => {
+router.delete("/:id/permanent-delete", validateToken, async (req: CustomRequest, res: Response) => {
     const userId = req.user?.userId;
     const fileId = req.params.id;
     try {
@@ -216,6 +215,8 @@ router.post("/:id/viewer", validateToken, async (req: CustomRequest, res: Respon
       return res.status(500).json({error: "Internal Server Error"});
     }
 });
+
+//Create public link
 router.post("/:id/share/view", validateToken, async (req: CustomRequest, res: Response) => {
   const driveFileId = req.params.id as string;
   const userId: string | undefined = req.user?.userId;
@@ -242,7 +243,7 @@ router.post("/:id/share/view", validateToken, async (req: CustomRequest, res: Re
     return res.status(500).json({ error: "Internal Server Error" });
   }
 });
-
+//Get public link
 router.get("/shared/:shareLink", async (req, res) => {
   const shareLink: string = req.params.shareLink;
 
@@ -311,9 +312,4 @@ router.get("/me", validateToken, async (req: CustomRequest, res: Response) => {
         return res.status(500).json({ error: "Internal Server Error" });
     }
 });
-
-
-
-
-
 export default router;

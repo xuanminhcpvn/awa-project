@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 interface IDriveFile {
     _id: string;
@@ -23,7 +23,7 @@ const Home = () => {
     const [files, setFiles] = useState<IDriveFile[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [user, setUser] = useState<IUser | null>(null);
-
+    const navigate = useNavigate();
     useEffect(() => {
         if(localStorage.getItem("token")) {
             setJwt(localStorage.getItem("token"))
@@ -31,9 +31,9 @@ const Home = () => {
         }
     }, [jwt])
     console.log(user);
+    
     // GET files
     const fetchFiles = async () => {
-        if (!jwt) return;  
         setLoading(true);
         try {
             const res = await fetch("/api/files", {
@@ -60,8 +60,17 @@ const Home = () => {
     };
 
     // POST new file
+    // POST new file
     const createFile = async () => {
-        if (!jwt) return;
+        // Ask user for filename
+        const enteredFileName: string | null = prompt("Enter file name:");
+
+        // If user cancels or enters empty name, stop creation
+        if (!enteredFileName || enteredFileName.trim() === "") {
+            alert("File name is required!");
+            return;
+        }
+
         try {
             const res = await fetch("/api/files", {
                 method: "POST",
@@ -70,17 +79,22 @@ const Home = () => {
                     "Authorization": `Bearer ${jwt}`
                 },
                 body: JSON.stringify({
-                    filename: "Untilted file",
+                    filename: enteredFileName.trim(), // use user input
                     type: "text",
                 }),
             });
 
-            if(!res.ok) {
-                throw new Error("Error while creating new file")
+            if (!res.ok) {
+                throw new Error("Error while creating new file");
             }
+
             const newFile: IDriveFile = await res.json();
-            console.log(newFile);
+
+            console.log("Created file:", newFile);
+
+            // Refresh file list after creation
             fetchFiles();
+
         } catch (err) {
             console.log("POST error:", err);
         }
@@ -121,7 +135,42 @@ const Home = () => {
             console.log(err);
         }
     };
+    // Rename file
+    const handleRename = async (fileId: string) => {
+        const newFileName: string | null = prompt("Enter new file name:");
 
+        if (!newFileName) {
+            alert("File name cannot be empty!");
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/document/${fileId}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${jwt}`
+                },
+                body: JSON.stringify({
+                    filename: newFileName.trim()
+                })
+            });
+
+            if (!res.ok) {
+                throw new Error("Failed to rename file");
+            }
+
+            const updatedFile = await res.json();
+            console.log("Renamed file:", updatedFile);
+
+            // refresh list
+            fetchFiles();
+
+        } catch (err) {
+            console.log("Rename error:", err);
+            alert("Rename failed");
+        }
+    };
     const handleShare = async (driveFileId: string, shareType: "edit" | "view") => {
         const email: string | null = prompt(`Enter the email address to grant ${shareType} access:`);
         if (!email) {
@@ -207,11 +256,11 @@ const Home = () => {
             return;
         }
 
-        const link = `${window.location.origin}/shared/${driveFile.shareLink}`;
+        const link = `${window.location.origin}/document/shared/${driveFile.shareLink}`;
         navigator.clipboard.writeText(link);
-
         alert("Link copied!");
     };
+
 
     return (
         <div style={{ padding: "20px" }}>
@@ -221,11 +270,8 @@ const Home = () => {
                 <p>Please login to fetch the files.</p>
             ) : (
                 <>
-                    <button onClick={createFile}>+ New File</button>
-
-                    <button onClick={fetchFiles} style={{ marginLeft: "10px" }}>
-                        Refresh
-                    </button>
+                    <button onClick={createFile}>New File</button>
+                    <button onClick={fetchFiles}>Refresh</button>
 
                     {loading && <p>Loading...</p>}
 
@@ -237,6 +283,8 @@ const Home = () => {
                                 <li key={file._id}>
                                     <strong>{file.filename}</strong> ({file.type}) —{" "}
                                     {new Date(file.updatedAt).toLocaleString()}
+                                    {/* Rename file */}
+                                    <button onClick={() => handleRename(file._id)}>Rename</button>
                                     {/* Share buttons*/}
                                     {isOwner && (
                                     <>
@@ -249,11 +297,9 @@ const Home = () => {
                                         {file.isPublic && (<button onClick={() => copyLink(file)}>Copy Public Link</button>)}
                                     </>
                                     )}
-                                      {/* Edit in editor */}
-                                    <Link to={`/editor/${file._id}`}>
-                                        Edit
-                                    </Link>
-
+                                      {/* Edit in document */}
+                                    <button onClick={() => navigate(`/document/edit/${file._id}`)}>Edit</button>
+                                    <button onClick={() => navigate(`/document/view/${file._id}`)}>View Contents</button>
                                     {/* Soft delete (everyone) */}
                                     <button data-testid="cypress-soft-delete-btn"
                                         onClick={() => softDelete(file._id)}
