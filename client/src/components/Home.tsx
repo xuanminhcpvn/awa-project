@@ -261,68 +261,65 @@ const Home = () => {
         alert("Link copied!");
     };
 
-
+    //basic UI (see previous git commit) is done by me
+    //I used chatGPT to refine UI
     return (
-        <div style={{ padding: "20px" }}>
+        <div style={{ padding: "20px", maxWidth: "900px", margin: "0 auto" }}>
             <h2>My Drive</h2>
-
             {!jwt ? (
                 <p>Please login to fetch the files.</p>
             ) : (
                 <>
-                    <button onClick={createFile}>New File</button>
-                    <button onClick={fetchFiles}>Refresh</button>
-
+                    {/* Top buttons */}
+                    <div style={{ marginBottom: "20px" }}>
+                        <button onClick={createFile} style={{ marginRight: "10px" }}>New File</button>
+                        <button onClick={fetchFiles}>Refresh</button>
+                    </div>
                     {loading && <p>Loading...</p>}
-
-                    <ul>
-                        {files.map((file) => {
-                            const isOwner = user?._id === file.ownerId;
-
-                            return (
-                                <li key={file._id}>
-                                    <strong>{file.filename}</strong> ({file.type}) —{" "}
-                                    {new Date(file.updatedAt).toLocaleString()}
-                                    {/* Rename file */}
-                                    <button onClick={() => handleRename(file._id)}>Rename</button>
-                                    {/* Share buttons*/}
-                                    {isOwner && (
-                                    <>
-                                        <button onClick={() => handleShare(file._id, "edit")}>Share Edit</button>
-                                        <button onClick={() => handleShare(file._id, "view")}>Share View</button>
-                                        {/* Public toggle button */}
-                                        <button onClick={() => togglePublic(file._id, file.isPublic)}>{file.isPublic ? "Make Private" : "Make Public"}</button>
-
-                                        {/* copy link only if public */}
-                                        {file.isPublic && (<button onClick={() => copyLink(file)}>Copy Public Link</button>)}
-                                    </>
+                    {files.map((file) => {
+                        const isOwner: boolean = user?._id === file.ownerId;
+                        return (
+                            <div
+                                key={file._id}
+                                style={{
+                                    border: "1px solid #ccc",
+                                    borderRadius: "8px",
+                                    padding: "15px",
+                                    marginBottom: "15px"
+                                }}
+                            >
+                                {/* File Info */}
+                                <div style={{ marginBottom: "10px" }}>
+                                    <strong style={{ fontSize: "18px" }}>{file.filename}</strong>
+                                    <div>Type: {file.type}</div>
+                                    <div>Updated: {new Date(file.updatedAt).toLocaleString()}</div>
+                                    {file.isPublic && (
+                                        <div>Public</div>
                                     )}
-                                      {/* Edit in document */}
+                                </div>
+                                {/* Buttons modifying file  */}
+                                <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                                     <button onClick={() => navigate(`/document/edit/${file._id}`)}>Edit</button>
-                                    <button onClick={() => navigate(`/document/view/${file._id}`)}>View Contents</button>
-                                    {/* Soft delete (everyone) */}
-                                    <button data-testid="cypress-soft-delete-btn"
-                                        onClick={() => softDelete(file._id)}
-                                        style={{ marginLeft: "10px" }}
-                                    >
-                                        Delete
-                                    </button>
-
-                                    {/* Permanent delete (owner only) */}
+                                    <button onClick={() => navigate(`/document/view/${file._id}`)}>View</button>
+                                    <button onClick={() => handleRename(file._id)}>Rename</button>
+                                    <button data-testid="cypress-soft-delete-btn" onClick={() => softDelete(file._id)}>Delete</button>
                                     {isOwner && (
-                                        <button
-                                            onClick={() => permanentDelete(file._id)}
-                                            style={{ marginLeft: "10px", color: "red" }}
-                                        >
-                                            Delete permanently
-                                        </button>
+                                        <>
+                                            <button onClick={() => handleShare(file._id, "edit")}>Share Edit</button>
+                                            <button onClick={() => handleShare(file._id, "view")}>Share View</button>
+                                            <button onClick={() =>togglePublic(file._id, file.isPublic)}>{file.isPublic? "Make Private": "Make Public"}</button>
+                                            {file.isPublic && (<button onClick={() => copyLink(file)}>Copy Public Link</button>)}
+                                            <button onClick={() => permanentDelete(file._id)} style={{ color: "red" }}>Delete Permanently</button>
+                                        </>
                                     )}
-                                </li>
-                            );
-                        })}
-                    </ul>
+                                </div>
+                            </div>
+                        );
+                    })}
 
-                    {files.length === 0 && !loading && <p>No files found</p>}
+                    {files.length === 0 && !loading && (
+                        <p>No files found</p>
+                    )}
                 </>
             )}
         </div>
