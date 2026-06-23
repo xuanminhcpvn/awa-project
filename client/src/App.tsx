@@ -18,7 +18,7 @@ function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/document/edit/:driveFileId" element={<DocumentEdit />} />
-          <Route path="/document/view/:fileId" element={<DocumentView />} />
+          <Route path="/document/view/:driveFileId" element={<DocumentView />} />
           <Route path="/document/public/:driveFileId" element={<DocumentPublic />} />
           <Route path="/register" element={<Register />} />
           <Route path="/login" element={<Login />} />

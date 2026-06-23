@@ -10,21 +10,36 @@ interface IDocument {
 
 const DocumentPublic = () => {
     const { driveFileId } = useParams<{ driveFileId: string }>();
-
+     const [jwt, setJwt] = useState<string | null>(null);
     const [document, setDocument] = useState<IDocument | null>(null);
+    //Token init once => Separate refresh token function later
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        setJwt(token);
+    }, []);
 
     useEffect(() => {
+        if (!driveFileId || !jwt) return;
+
         const fetchDocument = async () => {
-            const response = await fetch(`/api/document/${driveFileId}`);
+            try {
+                const response = await fetch(`/api/document/${driveFileId}`, {
+                    method: "GET",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${jwt}`
+                    }
+                });
 
-            const data = await response.json();
-            setDocument(data);
-        };
+                const data = await response.json();
+                setDocument(data);
+            } catch (err) {
+                console.error(err);
+            }
+            };
 
-        if (driveFileId) {
             fetchDocument();
-        }
-    }, [driveFileId]);
+    }, [driveFileId, jwt]);
 
     const modules = {
         toolbar: false, 
