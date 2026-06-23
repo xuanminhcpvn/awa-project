@@ -24,12 +24,16 @@ const Home = () => {
     const [files, setFiles] = useState<IDriveFile[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [user, setUser] = useState<IUser | null>(null);
-    //Additional features: sort, search
+    //Additional features: sort, search, pagination
     const [sortBy, setSortBy] = useState<string>("name");
     const [searchTerm, setSearchTerm] = useState<string>("");
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const itemsPerPage = 5;
+    
 
     const navigate = useNavigate();
     //Updated state control to set jtw token once and fetch everything else when jwt is set or refreshed
+
     useEffect(() => {
         const token = localStorage.getItem("token");
         if (token) {
@@ -44,7 +48,6 @@ const Home = () => {
         fetchMe();
         fetchFiles();
     }, [jwt]);
-    
     // GET files
     const fetchFiles = async () => {
         setLoading(true);
@@ -268,7 +271,7 @@ const Home = () => {
         return `${day}.${month}.${year}`;
     };
 
-    //Sort first => then search
+    //Sort first => then search => then paginate (actually pretty simple)
     const sortedFiles: IDriveFile[] = [...files].sort((a: IDriveFile, b: IDriveFile): number => {
         //Note
         if (sortBy === "name") {
@@ -286,12 +289,22 @@ const Home = () => {
         return 0;
     }
     );
-    //Filter the sortedFile => start with certain character
+    //Filter the sortedFile => start with certain character 
     //Dev notes: Reference to the searchbar feature: https://stackoverflow.com/questions/79003763/i-have-tried-to-implement-search-functionality-in-react-when-i-clear-the-input
     //Though in that example they use a separate component => but filter is good way to render search result live
+    //For starting on pagination https://stackoverflow.com/questions/40232847/how-to-implement-pagination-in-react Piotr Berebecki
+    //Then I figured that it did not implmenent different page render => https://stackoverflow.com/questions/76511587/how-to-do-pagination-like-google-docs-using-react Ali Safari
+    //Then this solution Ali Safari gave use react-pagination lib which is not compatible with my stack (or that was what I though)
+    //=>
     const visibleFiles: IDriveFile[] = sortedFiles.filter(
         (file: IDriveFile): boolean =>
             file.filename.toLowerCase().startsWith(searchTerm.toLowerCase())
+    );
+    //Front-end pagination to match search and sort also front-end
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const paginatedFiles = visibleFiles.slice(
+        startIndex,
+        startIndex + itemsPerPage
     );
     //basic UI (see previous git commit) is done by me
     //I used chatGPT to refine UI
@@ -317,7 +330,7 @@ const Home = () => {
                         </select>
                     </div>
                     {loading && <p>Loading...</p>}
-                    {visibleFiles.map((file) => {
+                    {paginatedFiles.map((file) => {
                         const isOwner: boolean = user?._id === file.ownerId;
                         return (
                             <div
@@ -358,7 +371,17 @@ const Home = () => {
                             </div>
                         );
                     })}
-
+                    <div style={{ marginTop: "20px" }}>
+                        <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}>Prev</button>
+                        <span style={{ margin: "0 10px" }}>Page {currentPage}</span>
+                        <button onClick={() => setCurrentPage((p) =>
+                            p < Math.ceil(visibleFiles.length / itemsPerPage) ? p + 1 : p
+                            )}
+                            disabled={currentPage >= Math.ceil(visibleFiles.length / itemsPerPage)}
+                        >
+                            Next
+                        </button>
+                    </div>    
                     {files.length === 0 && !loading && (
                         <p>No files found</p>
                     )}
