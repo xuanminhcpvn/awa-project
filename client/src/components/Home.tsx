@@ -16,7 +16,11 @@ interface IUser {
     _id: string;
     username: string;
     email: string;
-    image?: string;
+    imageId?: {
+        filename: string;
+        path: string;
+    } | null;
+    imageUrl?: string;
 }
 
 const Home = () => {
@@ -29,7 +33,8 @@ const Home = () => {
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [currentPage, setCurrentPage] = useState<number>(1);
     const itemsPerPage = 5;
-    
+    //profile upload
+    const [uploadingImage, setUploadingImage] = useState<boolean>(false);
 
     const navigate = useNavigate();
     //Updated state control to set jtw token once and fetch everything else when jwt is set or refreshed
@@ -244,9 +249,16 @@ const Home = () => {
             if (!res.ok) {
                 throw new Error("Failed to fetch user");
             }
-
+            
             const user = await res.json();
-            setUser(user);
+            const normalizedUser: IUser = {
+            ...user,
+            imageUrl: user.imageId
+                ? `http://localhost:1234/uploads/${user.imageId.filename}`
+                : undefined
+            };
+
+            setUser(normalizedUser);
         } catch (err) {
             console.log(err);
         }
@@ -300,17 +312,123 @@ const Home = () => {
         (file: IDriveFile): boolean =>
             file.filename.toLowerCase().startsWith(searchTerm.toLowerCase())
     );
+    
     //Front-end pagination to match search and sort also front-end
     const startIndex = (currentPage - 1) * itemsPerPage;
     const paginatedFiles = visibleFiles.slice(
         startIndex,
         startIndex + itemsPerPage
     );
+    //upload images
+        //upload profile-image
+    const uploadProfileImage = async (file: File) => {
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append("image", file);
+
+        try {
+            setUploadingImage(true);
+
+            const res = await fetch("/api/user/profile-image", {
+                method: "POST",
+                headers: {
+                    Authorization: `Bearer ${jwt}`
+                },
+                body: formData
+            });
+
+            if (!res.ok) {
+                throw new Error("Failed to upload profile image");
+            }
+
+            const data = await res.json();
+
+            // EDITED: update user immediately after upload
+            setUser((prev) =>
+                prev
+                    ? {
+                        ...prev,
+                        imageUrl: data.imageUrl
+                    }
+                    : prev
+            );
+
+        } catch (err) {
+            console.log(err);
+            alert("Image upload failed");
+        } finally {
+            setUploadingImage(false);
+        }
+    };
+
+    const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    uploadProfileImage(file);
+    };
+
     //basic UI (see previous git commit) is done by me
     //I used chatGPT to refine UI
     return (
         <div style={{ padding: "20px", maxWidth: "900px", margin: "0 auto" }}>
             <h2>My Drive</h2>
+                {/* EDITED: Profile image section with upload */}
+{/* EDITED: Profile image section with upload */}
+{user && (
+    <div
+        style={{
+            marginBottom: "20px",
+            display: "flex",
+            alignItems: "center",
+            gap: "15px",
+            padding: "15px",
+            border: "1px solid #ccc",
+            borderRadius: "8px"
+        }}
+    >
+        {user.imageUrl ? (
+            <img
+                src={user.imageUrl}
+                alt="profile"
+                style={{
+                    width: "100px",
+                    height: "100px",
+                    borderRadius: "50%",
+                    objectFit: "cover",
+                    border: "2px solid #ccc"
+                }}
+            />
+        ) : (
+            <div
+                style={{
+                    width: "100px",
+                    height: "100px",
+                    borderRadius: "50%",
+                    background: "#ccc"
+                }}
+            />
+        )}
+
+        <div>
+            <div style={{ fontSize: "20px", fontWeight: "bold" }}>
+                {user.username}
+            </div>
+            <div style={{ marginBottom: "10px" }}>{user.email}</div>
+
+            {/* EDITED: Upload input */}
+            <input
+                type="file"
+                accept="image/*"
+                onChange={handleImageSelect}
+            />
+
+            {/* EDITED: Loading state */}
+            {uploadingImage && <div>Uploading...</div>}
+        </div>
+    </div>
+)}
             {!jwt ? (
                 <p>Please login to fetch the files.</p>
             ) : (

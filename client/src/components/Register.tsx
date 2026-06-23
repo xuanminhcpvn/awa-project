@@ -1,32 +1,34 @@
 /*CT30A3204 Advanced Web Applications Final Project
   Author: Minh Pham
   Created at: 20/06/2026
-  Last modified at: 20/06/206
+  Last modified at: 23/06/206
 */
 import { useState } from "react";
-const registerUser = async (username: string, email: string, password: string, setLoading: (value: boolean) => void) => {
+const registerUser = async (username: string, email: string, password: string,image: File | null, setLoading: (value: boolean) => void) => {
     try {
         setLoading(true);
         // Might need to refactor when the user model gets more complex
-        const response = await fetch("http://localhost:3000/api/user/register", {
+        //=> response in formData format
+        const formData: FormData = new FormData();
+        formData.append("username", username);
+        formData.append("email", email);
+        formData.append("password", password);
+
+        // Profile image (optional)
+        if (image) {
+            formData.append("image", image);
+        }
+
+        const res = await fetch("http://localhost:3000/api/user/register", {
             method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({
-                username,
-                email,
-                password
-            })
+            body: formData
         });
-        
-        if (!response.ok) {
+
+        if (!res.ok) {
             throw new Error("Error fectching data");
         }
-        const data = await response.json();
-        console.log(data)
-        // Next page => login
-        if(response.status === 200) {
-            window.location.href = "/login";
-        }
+        const data: any = await res.json();
+        console.log(data);
 
     } catch (error) {
         if (error instanceof Error) {
@@ -41,6 +43,7 @@ const Register = () => {
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [image, setImage] = useState<File | null>(null);
     const [loading, setLoading] = useState(false);
     return (
         <div>
@@ -54,7 +57,7 @@ const Register = () => {
             />
             {/* Email input */}
             <input
-                type="mail" 
+                type="email" 
                 placeholder="Email" 
                 value={email}
                 onChange={(e) => setEmail(e.target.value)} 
@@ -66,8 +69,15 @@ const Register = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
             />
+            {/* Profile image input */}
+            <input type="file" accept="image/*" onChange={(e) => {
+                    if (e.target.files && e.target.files[0]) {
+                        setImage(e.target.files[0]);
+                    }
+                }}
+            />
             {/* Submit button */}
-            <button onClick={() => registerUser(username,email, password, setLoading)} disabled={loading}>
+            <button onClick={() => registerUser(username,email, password, image, setLoading)} disabled={loading}>
                 {loading ? "Registering..." : "Register"}
             </button>
         </div>

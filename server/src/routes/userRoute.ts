@@ -3,9 +3,12 @@ import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import {User, IUser} from "../models/User";
 import { CustomRequest, validateToken } from "../middleware/validateToken";
+import upload from "../middleware/multer-config";
+import { Image, IImage } from "../models/Image";
+import path from "path"
 const router: Router = Router();
 
-router.post("/register", async (req:Request, res:Response) => {
+router.post("/register",upload.single("image"), async (req:Request, res:Response) => {
     try {
         const { username, email, password } = req.body as IUser;
         if (!username || !password || !email) {
@@ -16,10 +19,21 @@ router.post("/register", async (req:Request, res:Response) => {
             return res.status(403).json({ message: "User already exists" });
         }
         const hashedPassword:string = await bcrypt.hash(password, 10);
+        let imageId = null;
+        if (req.file) {
+            const newImage: IImage | null = new Image({
+                filename: req.file.filename,
+                path: req.file.path
+            });
+
+            const savedImage = await newImage.save();
+            imageId = savedImage._id;
+        }
         const newUser: IUser = new User({
             username,
             email,
-            password: hashedPassword
+            password: hashedPassword,
+            imageId: imageId
         });
         await newUser.save();
         return res.status(200).json({ message: "User registered successfully" });
@@ -56,9 +70,10 @@ router.post("/login", async (req:Request, res:Response) => {
 });
 
 /* Proected route test*/
+
 router.get("/me", validateToken, async (req: CustomRequest, res:Response) => {
     try {
-        const user: IUser | undefined = await User.findById(req.user?.userId).select("-password");
+        const user = await User.findById(req.user?.userId).select("-password").populate("imageId");;
         if (!user) {
             return res.status(404).json({ message: "User not found" });
         }
@@ -68,5 +83,31 @@ router.get("/me", validateToken, async (req: CustomRequest, res:Response) => {
         return res.status(500).json({error: "Internal Server Error"});
     }
 });
+//profile-image upload
+router.post("/profile-image", validateToken, upload.single("image"), async (req: CustomRequest, res: Response) => {
+        try {
+            const userId = req.user?.userId;
+            if (!req.file) {
+                return res.status(400).json({ error: "No file uploaded" });
+            }
 
+            if (!req.file) {
+                return res.status(400).json({ message: "No file uploaded" });
+            }
+            const imageUrl = `http://localhost:3000/uploads/images/${req.file.filename}`;
+            //const user = await User.findByIdAndUpdate(
+                //userId,
+                //{ imageId: filename },
+                //{ new: true }
+            //);
+
+            return res.status(200).json({
+                message: "Profile image updated",
+                imageUrl: imageUrl
+            });
+        } catch {
+            return res.status(500).json({ error: "Internal Server Error" });
+        }
+    }
+);
 export default router;

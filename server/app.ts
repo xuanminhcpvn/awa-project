@@ -9,6 +9,7 @@
     import userRouter from "./src/routes/userRoute";
     import filesRouter from "./src/routes/filesRoute";
     import documentRoute from "./src/routes/documentRoute";
+    import imageRoute from "./src/routes/imageRoute";
     //2. create Express application instance
     //Note for myself ts require type definition here we have Express, but what express() means
     //Ans: express() = function
@@ -40,10 +41,13 @@
     app.use(express.json());//app can read JSON data sent from the client 
     app.use(express.urlencoded({extended: false}));// parse URL-encoded form data, making it accessible as a JavaScript object in req.body//extended = Allows parsing of nested objects and arrays using the qs library.
     app.use(morgan("dev"));//dev logs
+    const uploadDir: string = path.join(process.cwd(), "uploads", "images")
+    app.use("/uploads", express.static(uploadDir));   
     //6. Routers
     app.use("/api/user",userRouter);
     app.use("/api/files",filesRouter);
     app.use("/api/document",documentRoute);
+    app.use("/api/image",imageRoute)
     //7. setting corse options => By default CORS block proxying cross origin sources through scripts
     //console.log("NODE_ENV =", process.env.NODE_ENV);
     /*Now, if we run NODE_ENV=development npm run dev:server (or Windows users SET NODE_ENV=development& npm run dev:server), the server allows requests from http://localhost:3000.*/
