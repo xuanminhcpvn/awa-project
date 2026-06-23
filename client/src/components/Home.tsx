@@ -30,9 +30,10 @@ const Home = () => {
     const [searchTerm, setSearchTerm] = useState<string>("");
     const [currentPage, setCurrentPage] = useState<number>(1);
     const itemsPerPage = 5;
+    //clone
+    const [cloningId, setCloningId] = useState<string | null>(null);
     //profile upload
     const [uploadingImage, setUploadingImage] = useState<boolean>(false);
-
     const navigate = useNavigate();
     //Updated state control to set jtw token once and fetch everything else when jwt is set or refreshed
 
@@ -367,47 +368,70 @@ const Home = () => {
     uploadProfileImage(file);
     };
 
+    const handleClone = async (fileId: string) => {
+        try {
+            setCloningId(fileId);
+
+            const res = await fetch(`/api/files/${fileId}/clone`, {
+                method: "POST",
+                headers: {
+                    "Authorization": `Bearer ${jwt}`
+                }
+            });
+
+            if (!res.ok){
+                throw new Error("Cloning  failed");
+            }
+            const newFile: IDriveFile = await res.json();
+            setFiles((prev) => [newFile, ...prev]);//update UI
+        } catch (err) {
+            console.log("Clone error:", err);
+            alert("Failed to clone file");
+        } finally {
+            setCloningId(null);
+        }
+    };
+
+
     //basic UI (see previous git commit) is done by me
     //I used chatGPT to refine UI
     return (
         <div style={{ padding: "20px", maxWidth: "900px", margin: "0 auto" }}>
             <h2>My Drive</h2>
-                {/* EDITED: Profile image section with upload */}
-{/* EDITED: Profile image section with upload */}
-{user && (
-    <div
-        style={{
-            marginBottom: "20px",
-            display: "flex",
-            alignItems: "center",
-            gap: "15px",
-            padding: "15px",
-            border: "1px solid #ccc",
-            borderRadius: "8px"
-        }}
-    >
-        {user.imageUrl ? (
-            <img
-                src={user.imageUrl}
-                alt="profile"
-                style={{
-                    width: "100px",
-                    height: "100px",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    border: "2px solid #ccc"
-                }}
-            />
-        ) : (
-            <div
-                style={{
-                    width: "100px",
-                    height: "100px",
-                    borderRadius: "50%",
-                    background: "#ccc"
-                }}
-            />
-        )}
+                {user && (
+                    <div
+                        style={{
+                        marginBottom: "20px",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "15px",
+                        padding: "15px",
+                        border: "1px solid #ccc",
+                        borderRadius: "8px"
+                    }}
+                    >
+                    {user.imageUrl ? (
+                        <img
+                            src={user.imageUrl}
+                            alt="profile"
+                            style={{
+                                width: "100px",
+                                height: "100px",
+                                borderRadius: "50%",
+                                objectFit: "cover",
+                                border: "2px solid #ccc"
+                            }}
+                        />
+                    ) : (
+                        <div
+                            style={{
+                                width: "100px",
+                                height: "100px",
+                                borderRadius: "50%",
+                                background: "#ccc"
+                            }}
+                        />
+                    )}
 
         <div>
             <div style={{ fontSize: "20px", fontWeight: "bold" }}>
@@ -472,6 +496,7 @@ const Home = () => {
                                 <div style={{ display: "flex", flexWrap: "wrap", gap: "8px" }}>
                                     <button onClick={() => navigate(`/document/edit/${file._id}`)}>Edit</button>
                                     <button onClick={() => navigate(`/document/view/${file._id}`)}>View</button>
+                                    <button onClick={() => handleClone(file._id)} disabled={cloningId === file._id}>{cloningId === file._id ? "Cloning..." : "Duplicate"}</button>
                                     <button onClick={() => handleRename(file._id)}>Rename</button>
                                     {!isOwner && (<button data-testid="cypress-soft-delete-btn" onClick={() => softDelete(file._id)}>Delete</button>)}
                                     {isOwner && (

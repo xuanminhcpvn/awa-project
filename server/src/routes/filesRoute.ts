@@ -261,4 +261,49 @@ router.get("/me", validateToken, async (req: CustomRequest, res: Response) => {
         return res.status(500).json({ error: "Internal Server Error" });
     }
 });
+
+//Clone existing file (create duplicate)
+router.post("/:id/clone", validateToken, async (req: CustomRequest, res: Response) => {
+  const fileId= req.params.id as string;
+  const userId: string | undefined = req.user?.userId;
+
+  try {
+    const originalFile: IDriveFile | null = await DriveFile.findById(fileId);
+
+    if (!originalFile || originalFile.isSoftDeleted) {
+      return res.status(404).json({ message: "File not found" });
+    }
+
+    const isOwner:boolean = originalFile.ownerId.toString() === userId;
+    // If converting ObjectId to string and compare it doesn't work we may have to use mongoose own equals() function https://mongoosejs.com/docs/api/document.html#Document.prototype.equals()
+    const canEdit: boolean = isOwner || originalFile.editableUsers.map((id: Types.ObjectId) => id.toString()).includes(userId?.toString() || "");
+
+    if (!canEdit) {
+      return res.status(403).json({ message: "No permission to clone this file" });
+    }
+
+    // create cloned file
+    const clonedFile: IDriveFile = new DriveFile({
+      ownerId: userId, // clone belongs to current user
+      filename: `Copy of ${originalFile.filename}`,
+      contents: originalFile.contents,
+      type: originalFile.type,
+      folderId: originalFile.folderId,
+
+      // reset state and permissions
+      isPublic: false,
+      shareLink: null,
+      isFavorite: false,
+      isSoftDeleted: false,
+      softDeletedAt: null,
+      editableUsers: [],
+      viewOnlyUsers: []
+    });
+
+    await clonedFile.save();
+    return res.status(200).json(clonedFile);
+  } catch (error) {
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
 export default router;
