@@ -6,6 +6,8 @@ interface IDriveFile {
     _id: string;
     filename: string;
     contents: string;
+    imageUrl?: string | null;
+    type: "text" | "spreadsheet" | "slide" | "image";   
 }
 
 const DocumentPublic = () => {

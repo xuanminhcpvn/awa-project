@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import SearchSortTool from "../components/SearchSortTool";
+import PaginationTool from "../components/PaginationTool";
 
 interface IDriveFile {
     _id: string;
@@ -34,10 +36,8 @@ const Home = () => {
     const itemsPerPage = 5;
     //clone
     const [cloningId, setCloningId] = useState<string | null>(null);
-    //profile upload
+    //profile+ image document upload
     const [uploadingImage, setUploadingImage] = useState<boolean>(false);
-    //Image document upload
-    const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
     const navigate = useNavigate();
     //Updated state control to set jtw token once and fetch everything else when jwt is set or refreshed
     const imageUploadInputId: string = "drive-image-upload";
@@ -248,7 +248,7 @@ const Home = () => {
                     "Authorization": `Bearer ${jwt}`
                 }
             });
-
+            
             if (!res.ok) {
                 throw new Error("Failed to fetch user");
             }
@@ -264,6 +264,8 @@ const Home = () => {
             setUser(normalizedUser);
         } catch (err) {
             console.log(err);
+            alert("Access token expired! Logging out...")
+            navigate("login")
         }
     };
 
@@ -509,15 +511,7 @@ const Home = () => {
                         <input id={imageUploadInputId} type="file" accept="image/*" style={{ display: "none" }} onChange={handleDriveImageSelect}/>
                         <button onClick={() => {const imageInput: HTMLElement | null = document.getElementById(imageUploadInputId); imageInput?.click();}}>Upload Image</button>
                         <button onClick={fetchFiles}>Refresh</button>
-                        {/* Search bar */}
-                        <input type="text" placeholder="Search documents..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)}/>
-                        {/* Sort dropdown*/}
-                        <label>Sort By: </label>
-                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                            <option value="name">Name</option>
-                            <option value="createdAt">Created Date</option>
-                            <option value="updatedAt">Last Updated</option>
-                        </select>
+                        <SearchSortTool searchTerm={searchTerm} setSearchTerm={setSearchTerm} sortBy={sortBy}setSortBy={setSortBy}/>
                     </div>
                     {loading && <p>Loading...</p>}
                     {paginatedFiles.map((file) => {
@@ -561,17 +555,7 @@ const Home = () => {
                             </div>
                         );
                     })}
-                    <div style={{ marginTop: "20px" }}>
-                        <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}>Prev</button>
-                        <span style={{ margin: "0 10px" }}>Page {currentPage}</span>
-                        <button onClick={() => setCurrentPage((p) =>
-                            p < Math.ceil(visibleFiles.length / itemsPerPage) ? p + 1 : p
-                            )}
-                            disabled={currentPage >= Math.ceil(visibleFiles.length / itemsPerPage)}
-                        >
-                            Next
-                        </button>
-                    </div>    
+                    <PaginationTool currentPage={currentPage} totalPages={Math.ceil(visibleFiles.length / itemsPerPage)} setCurrentPage={setCurrentPage}/>
                     {files.length === 0 && !loading && (
                         <p>No files found</p>
                     )}

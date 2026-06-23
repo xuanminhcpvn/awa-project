@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import SearchSortTool from "../components/SearchSortTool";
+import PaginationTool from "../components/PaginationTool";
 
 interface IDriveFile {
     _id: string;
@@ -161,24 +163,8 @@ const Trash = () => {
                 <p>Please login</p>
             ) : (
                 <>
-                    {/* Controls */}
-                    <div style={{ marginBottom: "20px" }}>
-                        <input
-                            placeholder="Search trash..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                        />
-
-                        <select
-                            value={sortBy}
-                            onChange={(e) => setSortBy(e.target.value)}
-                        >
-                            <option value="filename">Name</option>
-                            <option value="createdAt">Created</option>
-                            <option value="updatedAt">Updated</option>
-                        </select>
-                    </div>
-
+                    {/* search and sort at same level */}
+                    <SearchSortTool searchTerm={searchTerm} setSearchTerm={setSearchTerm} sortBy={sortBy}setSortBy={setSortBy}/>
                     {loading && <p>Loading...</p>}
 
                     {/* FILE LIST */}
@@ -225,34 +211,7 @@ const Trash = () => {
                             </div>
                         );
                     })}
-
-                    {/* Pagination */}
-                    <div style={{ marginTop: "20px" }}>
-                        <button
-                            onClick={() =>
-                                setCurrentPage((p) => Math.max(p - 1, 1))
-                            }
-                            disabled={currentPage === 1}
-                        >
-                            Prev
-                        </button>
-
-                        <span style={{ margin: "0 10px" }}>
-                            Page {currentPage} / {totalPages || 1}
-                        </span>
-
-                        <button
-                            onClick={() =>
-                                setCurrentPage((p) =>
-                                    p < totalPages ? p + 1 : p
-                                )
-                            }
-                            disabled={currentPage >= totalPages}
-                        >
-                            Next
-                        </button>
-                    </div>
-
+                    <PaginationTool currentPage={currentPage} totalPages={totalPages} setCurrentPage={setCurrentPage}/>
                     {files.length === 0 && !loading && <p>No trash items</p>}
                 </>
             )}

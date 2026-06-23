@@ -1,13 +1,13 @@
 import './App.css'
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Home from "./components/Home";
-import Login from "./components/Login";
-import Register from "./components/Register";
+import Home from "./pages/Home";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
 import Navigation from './components/Navigation'
-import DocumentView from './components/DocumentView';
-import DocumentEdit from './components/DocumentEdit';
-import DocumentPublic from './components/DocumentPublic';
-import DocumentTrash from './components/DocumentTrash';
+import DocumentView from './pages/DocumentView';
+import DocumentEdit from './pages/DocumentEdit';
+import DocumentPublic from './pages/DocumentPublic';
+import DocumentTrash from './pages/DocumentTrash';
 function App() { 
   return (
     <BrowserRouter>
