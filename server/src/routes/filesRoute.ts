@@ -41,9 +41,9 @@ router.post("/", validateToken,async (req: CustomRequest, res: Response) => {
 // Group that can access => owner, allowed to edit and view-only
 //  Returns sorted list of non-deleted files
 router.get("/",validateToken,async (req: CustomRequest, res: Response) => {
-    const userId = req.user?.userId;
+    const userId: string | undefined = req.user?.userId ;
     try {
-        const files: IDriveFile[] = await DriveFile.find({
+        const driveFiles: IDriveFile[] = await DriveFile.find({
             isSoftDeleted: false,
             $or: [
             { ownerId: new mongoose.Types.ObjectId(userId) },
@@ -51,7 +51,7 @@ router.get("/",validateToken,async (req: CustomRequest, res: Response) => {
             { viewOnlyUsers: new mongoose.Types.ObjectId(userId) }
   ]
         }).sort({ updatedAt: -1 });
-        return res.status(200).json(files);
+        return res.status(200).json(driveFiles);
     } catch (error) {
       return res.status(500).json({ error: "Internal Server Error" });
     }
@@ -59,24 +59,24 @@ router.get("/",validateToken,async (req: CustomRequest, res: Response) => {
 );
 //Soft-delete. Everyone has access to do that => not removing entry from db
 router.patch("/:id/soft-delete", validateToken, async (req: CustomRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const fileId = req.params.id;
+    const userId = req.user?.userId as string;
+    const driveFileId = req.params.id as string;
     try {
-        const file = await DriveFile.findById(fileId);
-        if (!file) {
+        const driveFile: IDriveFile | null = await DriveFile.findById(driveFileId);
+        if (!driveFile) {
             return res.status(404).json({ message: "File not found" });
         }
 
         // allow owner OR editor OR viewer(?)
-        const isOwner = file.ownerId.toString() === userId;
+        const isOwner: boolean = driveFile.ownerId.toString() === userId;
         // If converting ObjectId to string and compare it doesn't work we may have to use mongoose own equals() function https://mongoosejs.com/docs/api/document.html#Document.prototype.equals()
-        const isAllowed = isOwner || file.editableUsers.map(id => id.toString()).includes(userId.toString()) || file.viewOnlyUsers.map(id => id.toString()).includes(userId.toString());
+        const isAllowed = isOwner || driveFile.editableUsers.map(id => id.toString()).includes(userId.toString()) || driveFile.viewOnlyUsers.map(id => id.toString()).includes(userId.toString());
         if (!isAllowed) {
           return res.status(403).json({ message: "Permission denied" });
         }
-        file.isSoftDeleted = true;
-        file.softDeletedAt = new Date();
-        await file.save();
+        driveFile.isSoftDeleted = true;
+        driveFile.softDeletedAt = new Date();
+        await driveFile.save();
         return res.status(200).json({ message: "Moved to trash" });
     } catch (error) {
         return res.status(500).json({ error: "Internal Server Error" });
@@ -84,21 +84,67 @@ router.patch("/:id/soft-delete", validateToken, async (req: CustomRequest, res: 
 });
 //Permanent-delete => not showing to certain user. Only user can permanently delete
 router.delete("/:id/permanent-delete", validateToken, async (req: CustomRequest, res: Response) => {
-    const userId = req.user?.userId;
-    const fileId = req.params.id;
+    const userId = req.user?.userId as string;
+    const driveFileId = req.params.id as string;
     try {
-        const file: IDriveFile | null  = await DriveFile.findById(fileId);
-        if (!file || file.isSoftDeleted) {
+        const driveFile: IDriveFile | null  = await DriveFile.findById(driveFileId);
+        if (!driveFile) {
             return res.status(404).json({ message: "File not found" });
         }
-        if (file.ownerId.toString() !== userId) {
+        if (driveFile.ownerId.toString() !== userId) {
             return res.status(403).json({ message: "Access denied, only owner can permanently delete" });//well the button only renders to owner so not really needed
         }
-        await DriveFile.findByIdAndDelete(fileId);
+        await DriveFile.findByIdAndDelete(driveFileId);
         res.json({ message: "File deleted permanently" });
     } catch (error) {
         return res.status(500).json({ message: "Internal server error" });
     }
+});
+
+router.get("/trash", validateToken, async (req: CustomRequest, res: Response) => {
+  const userId = req.user?.userId;
+
+  try {
+    const files = await DriveFile.find({
+      isSoftDeleted: true,
+      $or: [
+        { ownerId: userId },
+        { editableUsers: userId },
+        { viewOnlyUsers: userId }
+      ]
+    }).sort({ softDeletedAt: -1 });
+
+    return res.status(200).json(files);
+  } catch (error) {
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+router.patch("/:id/restore", validateToken, async (req: CustomRequest, res: Response) => {
+  const userId: string | undefined = req.user?.userId ;
+  const fileId = req.params.id as string;
+
+  try {
+    const driveFile: IDriveFile | null = await DriveFile.findById(fileId);
+
+    if (!driveFile || !driveFile.isSoftDeleted) {
+      return res.status(404).json({ message: "File not found in trash" });
+    }
+
+    const isOwner:boolean = driveFile.ownerId.toString() === userId;
+
+    if (!isOwner) {
+      return res.status(403).json({ message: "Only owner can restore" });
+    }
+
+    driveFile.isSoftDeleted = false;
+    driveFile.softDeletedAt = null;
+
+    await driveFile.save();
+
+    return res.status(200).json(driveFile);
+  } catch (error) {
+    return res.status(500).json({ error: "Internal Server Error" });
+  }
 });
 
 //Grant editor permission
@@ -116,7 +162,7 @@ router.post("/:id/editor", validateToken,async (req: CustomRequest, res: Respons
     if (!isOwner) {
       return res.status(403).json({message: "Only owner can add editor permission"});
     }
-    const userToAdd = await User.findOne({ email: userEmailToAdd });
+    const userToAdd : IUser | null = await User.findOne({ email: userEmailToAdd });
     if (!userToAdd) {
       return res.status(404).json({ message: "User not found" });
     }
@@ -199,13 +245,13 @@ router.get("/public/:shareLink", async (req, res) => {
   const shareLink: string = req.params.shareLink;
 
   try {
-    const file = await DriveFile.findOne({shareLink: shareLink,publicView: true});
+    const driveFile: IDriveFile | null = await DriveFile.findOne({shareLink: shareLink,publicView: true});
 
-    if (!file) {
+    if (!driveFile) {
       return res.status(404).json({ message: "Invalid link or file not found" });
     }
 
-    return res.status(200).json({...file.toObject(),mode: "read-only"});
+    return res.status(200).json({...driveFile.toObject(),mode: "read-only"});
   } catch {
     return res.status(500).json({ error: "Internal Server Error" });
   }
@@ -246,13 +292,13 @@ router.patch("/:id/visibility", validateToken, async (req: CustomRequest, res: R
 //Route to get user's info 
 router.get("/me", validateToken, async (req: CustomRequest, res: Response) => {
     try {
-        const userId = req.user?.userId;
+        const userId:string | null= req.user?.userId;
 
         if (!userId) {
             return res.status(401).json({ message: "Unauthorized" });
         }
 
-        const user = await User.findById(userId).select("-password"); 
+        const user: IUser | null = await User.findById(userId).select("-password"); 
 
         if (!user) {
             return res.status(404).json({ message: "User not found" });
@@ -265,11 +311,11 @@ router.get("/me", validateToken, async (req: CustomRequest, res: Response) => {
 
 //Clone existing file (create duplicate)
 router.post("/:id/clone", validateToken, async (req: CustomRequest, res: Response) => {
-  const fileId= req.params.id as string;
+  const driveFileId= req.params.id as string;
   const userId: string | undefined = req.user?.userId;
 
   try {
-    const originalFile: IDriveFile | null = await DriveFile.findById(fileId);
+    const originalFile: IDriveFile | null = await DriveFile.findById(driveFileId);
 
     if (!originalFile || originalFile.isSoftDeleted) {
       return res.status(404).json({ message: "File not found" });
@@ -309,22 +355,22 @@ router.post("/:id/clone", validateToken, async (req: CustomRequest, res: Respons
 });
 
 router.post("/upload-image",validateToken,upload.single("image"), async (req: CustomRequest, res: Response): Promise<void> => {
-        try {
-          if (!req.file) {
-            res.status(400).json({error: "Image file is required"});
-            return;
-          }
-          const driveFile: IDriveFile = await DriveFile.create({
-              ownerId: req.user?.userId,
-              filename: req.file.originalname,
-              contents: "image",
-              imageUrl: req.file.filename,
-              type: "image"
-          });
-          res.status(200).json(driveFile);
-        } catch (err) {
-          res.status(500).json({error: "Internal Server Error"});
-        }
+  try {
+    if (!req.file) {
+      res.status(400).json({error: "Image file is required"});
+      return;
     }
+    const driveFile: IDriveFile | null  = await DriveFile.create({
+        ownerId: req.user?.userId,
+        filename: req.file.originalname,
+        contents: "image",
+        imageUrl: req.file.filename,
+        type: "image"
+    });
+    res.status(200).json(driveFile);
+  } catch (err) {
+    res.status(500).json({error: "Internal Server Error"});
+  }
+  }
 );
 export default router;

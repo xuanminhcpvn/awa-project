@@ -215,13 +215,13 @@ router.get("/:id/lock-info", validateToken, async (req: CustomRequest, res: Resp
             return res.status(404).json({ error: "File not found" });
         }
 
-        let isLocked = false;
+        let isLocked:boolean = false;
         let lockedBy = null;
 
         //Lock timeout (10 min) => prevent stale lock
         if (driveFile.currentlyUsedBy && driveFile.lockedAt) {
 
-            const diff = Date.now() - new Date(driveFile.lockedAt).getTime();
+            const diff:number = Date.now() - new Date(driveFile.lockedAt).getTime();
 
             if (diff > 10 * 60 * 1000) {
                 driveFile.currentlyUsedBy = null;

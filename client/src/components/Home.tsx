@@ -9,6 +9,8 @@ interface IDriveFile {
     createdAt: string,
     updatedAt: string;
     isPublic: boolean;
+    isSoftDeleted: string,
+    softDeletedAt: string,
     shareLink: string;
 }
 
@@ -70,6 +72,7 @@ const Home = () => {
             } 
 
             const files: IDriveFile[] = await res.json();
+
             setFiles(files);
         } catch (err) {
             if (err instanceof Error) {
@@ -283,8 +286,12 @@ const Home = () => {
         return `${day}.${month}.${year}`;
     };
 
-    //Sort first => then search => then paginate (actually pretty simple)
-    const sortedFiles: IDriveFile[] = [...files].sort((a: IDriveFile, b: IDriveFile): number => {
+    //Active =>Sort first => then search => then paginate (actually pretty simple)
+    const activeFiles: IDriveFile[] = files.filter(
+        (file: IDriveFile) => !file.isSoftDeleted
+    );
+
+    const sortedFiles: IDriveFile[] = [...activeFiles].sort((a: IDriveFile, b: IDriveFile): number => {
         //Note
         if (sortBy === "name") {
             return a.filename.localeCompare(b.filename);
@@ -474,24 +481,24 @@ const Home = () => {
                         />
                     )}
 
-        <div>
-            <div style={{ fontSize: "20px", fontWeight: "bold" }}>
-                {user.username}
+            <div>
+                <div style={{ fontSize: "20px", fontWeight: "bold" }}>
+                    {user.username}
+                </div>
+                <div style={{ marginBottom: "10px" }}>{user.email}</div>
+
+                {/* EDITED: Upload input */}
+                <input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageSelect}
+                />
+
+                {/* EDITED: Loading state */}
+                {uploadingImage && <div>Uploading...</div>}
             </div>
-            <div style={{ marginBottom: "10px" }}>{user.email}</div>
-
-            {/* EDITED: Upload input */}
-            <input
-                type="file"
-                accept="image/*"
-                onChange={handleImageSelect}
-            />
-
-            {/* EDITED: Loading state */}
-            {uploadingImage && <div>Uploading...</div>}
-        </div>
-    </div>
-)}
+            </div>
+            )}
             {!jwt ? (
                 <p>Please login to fetch the files.</p>
             ) : (
@@ -541,14 +548,13 @@ const Home = () => {
                                     <button onClick={() => navigate(`/document/view/${file._id}`)}>View</button>
                                     <button onClick={() => handleClone(file._id)} disabled={cloningId === file._id}>{cloningId === file._id ? "Cloning..." : "Duplicate"}</button>
                                     <button onClick={() => handleRename(file._id)}>Rename</button>
-                                    {!isOwner && (<button data-testid="cypress-soft-delete-btn" onClick={() => softDelete(file._id)}>Delete</button>)}
                                     {isOwner && (
                                         <>{/*NOTE: image files cannot be shared as editors */}
                                         {file.type !== "image" && (<button onClick={() => handleShare(file._id, "edit")}>Share Edit</button>)}
                                             <button onClick={() => handleShare(file._id, "view")}>Share View</button>
                                             <button onClick={() =>togglePublic(file._id, file.isPublic)}>{file.isPublic? "Make Private": "Make Public"}</button>
+                                            <button data-testid="cypress-soft-delete-btn" onClick={() => softDelete(file._id)}>Move to Trash</button>
                                             {file.isPublic && (<button onClick={() => copyLink(file)}>Copy Public Link</button>)}
-                                            <button onClick={() => permanentDelete(file._id)} style={{ color: "red" }}>Delete Permanently</button>
                                         </>
                                     )}
                                 </div>

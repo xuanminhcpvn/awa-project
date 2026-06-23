@@ -83,13 +83,13 @@ router.get("/me", validateToken, async (req: CustomRequest, res:Response) => {
 });
 router.post("/profile-image", validateToken, upload.single("image"), async (req: CustomRequest, res: Response) => {
     try {
-        const userId = req.user?.userId;
+        const userId:string | null = req.user?.userId;
 
         if (!req.file) {
             return res.status(400).json({ error: "No file uploaded" });
         }
 
-        const user = await User.findById(userId);
+        const user: IUser | null = await User.findById(userId);
 
         if (!user) {
             return res.status(404).json({ error: "User not found" });

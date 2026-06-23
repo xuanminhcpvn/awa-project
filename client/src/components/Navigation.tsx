@@ -1,9 +1,9 @@
-import { Link } from "react-router-dom"
+import { Link, useNavigate } from "react-router-dom"
 import { useEffect, useState} from "react";
 
 const Navigation = () => {
     const [jwt, setJwt] = useState<string | null>(null);
-
+    const navigate = useNavigate();
     useEffect(() => {
         if(localStorage.getItem("token")) {
             setJwt(localStorage.getItem("token"));
@@ -26,17 +26,18 @@ const Navigation = () => {
 
     return (
     <nav style={{ display: "flex", gap: "20px", alignItems: "center" }}>
-        <Link to="/">home</Link>
+        <Link to="/">Home</Link>
 
         {!jwt ? (
             <>
-                <Link to="/login">login</Link>
-                <Link to="/register">register</Link>
+                <Link to="/login">Login</Link>
+                <Link to="/register">Register</Link>
             </>
         ) : (
-            <button onClick={logout}>logout</button>
+            <button onClick={logout}>Logout</button>
         )}
 
+        <button onClick={() => navigate("/trash")}>Trash</button>
         <button onClick={() => handleLanguageChange("fi")}>FI</button>
         <button onClick={() => handleLanguageChange("en")}>EN</button>
 

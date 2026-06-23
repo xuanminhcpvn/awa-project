@@ -7,6 +7,7 @@ import Navigation from './components/Navigation'
 import DocumentView from './components/DocumentView';
 import DocumentEdit from './components/DocumentEdit';
 import DocumentPublic from './components/DocumentPublic';
+import DocumentTrash from './components/DocumentTrash';
 function App() { 
   return (
     <BrowserRouter>
@@ -17,6 +18,7 @@ function App() {
 
         <Routes>
           <Route path="/" element={<Home />} />
+          <Route path="/trash" element={<DocumentTrash />} />
           <Route path="/document/edit/:driveFileId" element={<DocumentEdit />} />
           <Route path="/document/view/:driveFileId" element={<DocumentView />} />
           <Route path="/document/public/:driveFileId" element={<DocumentPublic />} />
