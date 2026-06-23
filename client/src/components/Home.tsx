@@ -24,6 +24,9 @@ const Home = () => {
     const [files, setFiles] = useState<IDriveFile[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [user, setUser] = useState<IUser | null>(null);
+
+    const [sortBy, setSortBy] = useState<string>("name");
+    
     const navigate = useNavigate();
     //Updated state control to set jtw token once and fetch everything else when jwt is set or refreshed
     useEffect(() => {
@@ -263,6 +266,24 @@ const Home = () => {
         const year:string = String(date.getFullYear());
         return `${day}.${month}.${year}`;
     };
+
+    const sortedFiles: IDriveFile[] = [...files].sort((a: IDriveFile, b: IDriveFile): number => {
+        //Note
+        if (sortBy === "name") {
+            return a.filename.localeCompare(b.filename);
+        }
+
+        if (sortBy === "createdAt") {
+            return (new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+        }
+
+        if (sortBy === "updatedAt") {
+            return (new Date(b.updatedAt).getTime() -new Date(a.updatedAt).getTime());
+        }
+
+        return 0;
+    }
+    );
     //basic UI (see previous git commit) is done by me
     //I used chatGPT to refine UI
     return (
@@ -276,9 +297,16 @@ const Home = () => {
                     <div style={{ marginBottom: "20px" }}>
                         <button onClick={createFile} style={{ marginRight: "10px" }}>New File</button>
                         <button onClick={fetchFiles}>Refresh</button>
+                        {/* Sort dropdown*/}
+                        <label>Sort By: </label>
+                        <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                            <option value="name">Name</option>
+                            <option value="createdAt">Created Date</option>
+                            <option value="updatedAt">Last Updated</option>
+                        </select>
                     </div>
                     {loading && <p>Loading...</p>}
-                    {files.map((file) => {
+                    {sortedFiles.map((file) => {
                         const isOwner: boolean = user?._id === file.ownerId;
                         return (
                             <div
