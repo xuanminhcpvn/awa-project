@@ -1,5 +1,6 @@
 //1. import required libs and frameworks
 import express, { Express } from "express";
+import fs from "fs";
 import path from "path";
 import morgan from "morgan"; //Morgan is used to see request and response logs in terminal
 import mongoose, { Connection } from "mongoose";
@@ -14,6 +15,9 @@ import imageRoute from "./src/routes/imageRoute";
 dotenv.config();
 const app: Express = express(); //this function must be on top;
 const port: number = parseInt(process.env.BACK_END_PORT as string) || 1234;
+//This would make static uploads should work in both dev + production
+const uploadDir: string = path.join(process.cwd(), "uploads", "images");
+fs.mkdirSync(uploadDir, { recursive: true });
 const clientDistPath = path.resolve(__dirname, "../../client/dist");
 const corsOptions: CorsOptions = {
     origin: `http://localhost:${process.env.FRONTEND_PORT}`,
@@ -21,8 +25,7 @@ const corsOptions: CorsOptions = {
 };
 app.use(cors(corsOptions));
 
-//This would make static uploads should work in both dev + production
-const uploadDir: string = path.join(process.cwd(), "uploads", "images");
+
 app.use("/uploads", express.static(uploadDir));
 
 //3. Link to database
