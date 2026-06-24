@@ -21,7 +21,7 @@ const registerUser = async (username: string, email: string, password: string,im
             formData.append("image", image);
         }
 
-        const res = await fetch("http://localhost:3000/api/user/register", {
+        const res = await fetch("/api/user/register", {
             method: "POST",
             body: formData
         });

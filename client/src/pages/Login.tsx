@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 const loginUser = async (username: string,password: string,setLoading: (value: boolean) => void,navigate: any,t: any) => {
     try {
         setLoading(true);
-        const res = await fetch("http://localhost:3000/api/user/login", {
+        const res = await fetch("/api/user/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({

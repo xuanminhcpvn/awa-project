@@ -1,7 +1,7 @@
 import { useEffect, useState, useTransition } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import ReactQuill from "react-quill-new";
-import "react-quill/dist/quill.snow.css";
+import "react-quill-new/dist/quill.snow.css";
 import { useTranslation } from "react-i18next";
 //import "react-quill/dist/quill.bubble.css";//or bubble whatever
 

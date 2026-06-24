@@ -3,4 +3,5 @@ dist/
 build/
 .env
 /client/cypress/screenshots
-server/uploads/
+.jpg
+.png
