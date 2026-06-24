@@ -200,7 +200,7 @@ const DocumentEdit = () => {
             <ReactQuill theme="snow" value={contents} onChange={setContents} readOnly={!currentUserOwnsLock} style={{width: "100%", minHeight: "200px"}}/>
         </div>
         {isLocked && !currentUserOwnsLock && (<p>{t("This document is locked by another user")}.</p>)}  
-        <button onClick={saveDocument} style={{ alignSelf: "flex-start"}}>{t("Save changes")}</button>
+        <button onClick={saveDocument} style={{ alignSelf: "center"}}>{t("Save changes")}</button>
     </div>
     );
 };

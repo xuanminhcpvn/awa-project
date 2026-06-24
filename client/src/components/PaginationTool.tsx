@@ -11,7 +11,7 @@ const PaginationTool = ({
 }: PaginationProps) => {
     const { t } = useTranslation();
     return (
-    <div style={{ marginTop: "20px", display: "flex", flexWrap: "wrap", alignItems: "center",gap: "10px"}}>
+    <div style={{ justifyContent: "center", marginTop: "20px", display: "flex", flexWrap: "wrap", alignItems: "center",gap: "10px"}}>
         <button onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))} disabled={currentPage === 1}>{t("Prev")}</button>
         <span style={{ margin: "0 10px" }}>{t("Page")} {currentPage} / {totalPages || 1}</span>
         <button onClick={() => setCurrentPage((p) => p < totalPages ? p + 1 : p)} disabled={currentPage >= totalPages}>{t("Next")}</button>
