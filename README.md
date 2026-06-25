@@ -1,5 +1,5 @@
 ﻿# awa-project
-All additional details suchare found in the Project_Documentation.pdf
+All additional details are found in the Project_Documentation.pdf
 Project_Documentation.pdf contains for example point proposal, installation instruction and user manual.
 Texts of this README is generated using ChatGPT using some Project Documentation contents.
 # Advanced Web Applications Project
