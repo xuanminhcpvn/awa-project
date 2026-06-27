@@ -32,7 +32,7 @@ Instruction to install and use the web application is written below step by step
    Go to the folder you want the git repository to reside in, then run this command:
 
 ```bash
-git clone https://github.com/xuanminhcpvn/Introduction-to-Web-Programming-Project.git
+git clone https://github.com/xuanminhcpvn/CT30A3204-Advanced-Web-Applications-Final-Project.git
 ```
 Go to the cloned folder:
 ```bash
